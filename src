@@ -1,0 +1,729 @@
+Option Explicit
+    
+'Public wb1 As Workbook
+'Set wb1 = ThisWorkbook
+'Public ws1 As Worksheet
+'Set ws1 = Worksheets("Sheet1")
+
+Public wbPPSS As Workbook
+'Set wbPPSS = Application.Workbooks.Open("\\ple01file01\manufacturing\PPSS\OPENARRAY PRODUCTION PRIORITIES.xlsx", UpdateLinks:=True, Notify:=True)
+Public wsPPSS As Worksheet
+'Set wsPPSS = wbPPSS.Worksheets("MTO")
+
+Dim N As Integer
+Dim oatext As String
+Dim i As Integer
+Dim WO As String
+Dim runid As String
+Dim temptype As String
+Dim samplecount As Integer
+Dim ptype As String
+Dim stype As String
+Dim lastj As Integer
+Dim lastwo As Integer
+Dim wocell As String
+Dim hold As String
+Dim customer As String
+
+
+
+
+Sub Generate_WO_Status_Cells()
+    'Clears the formatting in Column J
+    Range("J:J").ClearFormats
+    Range("J:J").Clear
+    
+    'Align Entries in Column J
+    Range("J1", "J50").HorizontalAlignment = xlCenter
+    Range("J1", "J50").VerticalAlignment = xlCenter
+    
+    Range("A2").Select
+    N = Range("A" & Rows.Count).End(xlUp).Row - 2
+    samplecount = 0
+    
+    For i = 0 To N
+        'Check for cells that does not contain a sample number
+        If ActiveCell.offset(i, 1) = "" Then samplecount = samplecount + 1
+        WO = ActiveCell.offset(i, 0)
+        runid = "-" & ActiveCell.offset(i, 1)
+        oatext = "(" & ActiveCell.offset(i, 2) & " OA" & ") "
+        ActiveCell.offset(i, 10) = WO & runid & vbLf & oatext & Date & vbLf & ActiveCell.offset(i, 3) & vbLf & ActiveCell.offset(i, 6) & " format" & vbLf & "TSD: " & ActiveCell.offset(i, 20)
+        If InStr(ActiveCell.offset(i, 4), "GEx") Then ActiveCell.offset(i, 10) = ActiveCell.offset(i, 10) & vbLf & " TAT: " & Date + 3
+        If InStr(ActiveCell.offset(i, 4), "GT") Then ActiveCell.offset(i, 10) = ActiveCell.offset(i, 10) & vbLf & " TAT: " & Date + 5
+        ActiveCell.offset(i, 10).Characters(Len(WO) + Len(runid) + 1, Len(oatext)).Font.Color = RGB(255, 0, 0)
+        ActiveCell.offset(i, 10).Characters(Len(WO) + Len(runid) + 1, Len(oatext)).Font.FontStyle = "Bold"
+        ActiveCell.offset(i, 10).Font.Size = 12
+        With ActiveCell.offset(i, 10)
+            .Borders(xlEdgeLeft).LineStyle = xlContinuous
+            .Borders(xlEdgeTop).LineStyle = xlContinuous
+            .Borders(xlEdgeBottom).LineStyle = xlContinuous
+            .Borders(xlEdgeRight).LineStyle = xlContinuous
+        End With
+            
+        
+        On Error GoTo reset_temptype
+        temptype = Cells(i + 2, 6)
+        stype = Cells(i + 2, 8)
+        ptype = Cells(i + 2, 5)
+        customer = Cells(i + 2, 4)
+        
+        hold = "HOLD" + vbLf + "NO TEMPLATE"
+        
+        'Add "Hold" Status for WO with blank template type
+        If temptype = "" Then
+            wocell = ActiveCell.offset(i, 10)
+            ActiveCell.offset(i, 10) = wocell + vbLf + hold
+            ActiveCell.offset(i, 10).Characters(Len(WO) + 1, Len(oatext)).Font.Color = RGB(255, 0, 0)
+            ActiveCell.offset(i, 10).Characters(Len(WO) + 1, Len(oatext)).Font.FontStyle = "Bold"
+            ActiveCell.offset(i, 10).Characters(Len(wocell) + 1, Len(hold) + 1).Font.Color = RGB(255, 0, 0)
+            ActiveCell.offset(i, 10).Characters(Len(wocell) + 1, Len(hold) + 1).Font.FontStyle = "Bold"
+        End If
+        
+        'Change color of the cells depending on the template type
+        Select Case customer
+        Case "ARUP", "ARUP ", "ARUP LABORATORIES"
+            ActiveCell.offset(i, 10).Interior.Color = RGB(255, 165, 0)
+        Case Else
+            If ptype = "GT" And Asc(stype) = Asc("Human") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 255)
+            ElseIf ptype = "GT" And Asc(stype) = Asc("PGx") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 255)
+            ElseIf ptype = "SNP" And Asc(stype) = Asc("PGx") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 255)
+            ElseIf ptype = "SNP" And Asc(stype) = Asc("Human") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 255)
+            ElseIf Asc(ptype) = Asc("GT") And Asc(stype) = Asc("CF") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 255)
+            ElseIf ptype = "GT" And Asc(stype) = Asc("Non-Human") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(177, 160, 199)
+            ElseIf ptype = "SNP" And Asc(stype) = Asc("Non-Human") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(177, 160, 199)
+            ElseIf Asc(ptype) = Asc("TaqMan Gex") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 0)
+            'ElseIf Asc(ptype) = Asc("TaqMan Gex") And Asc(stype) = Asc("Non-Human") Then
+            '    ActiveCell.Offset(i, 10).Interior.Color = RGB(118, 147, 60)
+            ElseIf Asc(ptype) = Asc("GEx") Then
+                ActiveCell.offset(i, 10).Interior.Color = RGB(0, 255, 0)
+            'ElseIf Asc(ptype) = Asc("GEx") And Asc(stype) = Asc("Non-Human") Then
+            '    ActiveCell.Offset(i, 10).Interior.Color = RGB(118, 147, 60)
+            Else
+                ActiveCell.offset(i, 10).Interior.Color = RGB(255, 255, 255)
+            End If
+        End Select
+    Next i
+    
+    'Give message box for user to know that they missed number of samples
+    If samplecount > 0 Then
+        MsgBox ("The number of arrays for " & samplecount & " WO's were not entered" & vbLf & "Please updated the number of arrays recieved for each work order and try again.")
+    'Else
+        'Copy and paste the generated cell over to the WO Status tab
+    '    lastj = Range("J" & Rows.Count).End(xlUp).Row
+     '   lastwo = Sheets("WO Status").Range("A" & Rows.Count).End(xlUp).Row + 1
+     '   Range("J2", "J" & lastj).Copy Destination:=Sheets("WO Status").Range("A" & lastwo)
+     '   MsgBox ("WO cells were successfully copied to WO Status tab")
+    End If
+
+    Exit Sub
+'----------------------------------------------------------------------------------------------
+'Error handling labels
+'----------------------------------------------------------------------------------------------
+reset_temptype:
+    temptype = ""
+    Resume Next
+    
+    
+End Sub
+
+Sub Vlookups()
+    
+    Dim srchval As String
+    Dim srchrange As Range
+    Dim srchrange2 As Range
+    Dim wb1 As Workbook
+    Set wb1 = ThisWorkbook
+    Dim ws1 As Worksheet
+    Set ws1 = wb1.Sheets(1)
+    Dim mtsorders As String
+    Dim mtscount As Integer
+    
+    With Application
+        .DisplayAlerts = False
+        .ScreenUpdating = False
+    End With
+    
+    Dim wbPPSS As Workbook
+    Set wbPPSS = Workbooks.Open("\\ple01file01\manufacturing\PPSS\OPENARRAY PRODUCTION PRIORITIES.xlsx", UpdateLinks:=False, ReadOnly:=True)
+    'Set wbPPSS = Workbooks.Open("\\ple01file01\Open_Array\Quality_Control\01_QC Personnel\Dat\WO Status Board\OA_PPSS_COPY.xlsx")
+    Dim wsPPSS As Worksheet
+    Dim wsPPSS2 As Worksheet
+    Set wsPPSS = wbPPSS.Sheets("MTO")
+    Set wsPPSS2 = wbPPSS.Sheets("MTS")
+
+    N = ws1.Range("A" & Rows.Count).End(xlUp).Row       'Define the number of times the code will loop
+    Set srchrange = wsPPSS.Range("A:AM")              'Define the search range MTO
+    Set srchrange2 = wsPPSS2.Range("A:S")             'Define the search range for MTS
+    
+    'Following loop uses VLookup to find information from PPSS anf populates them into current worksheet
+    ws1.Activate
+    mtsorders = ""
+    mtscount = 0
+    
+    For i = 2 To N
+        srchval = Left(ws1.Cells(i, 1), 7)              'takes "Work Order" and trims off the run to get a 7 digit WO number
+        'ws1.Cells(1, 9) = srchval
+        'ws1.Cells(1, 10) = wsPPSS.Cells(3, 17)
+        
+        On Error GoTo customer
+        ws1.Cells(i, 4) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 17, 0)
+        
+        On Error GoTo templatetype
+        ws1.Cells(i, 6) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 39, 0)
+        
+        On Error GoTo arrayformat
+        ws1.Cells(i, 7) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 5, 0)
+        
+        On Error GoTo species
+        ws1.Cells(i, 8) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 10, 0)
+        
+        On Error GoTo customcustom
+        ws1.Cells(i, 9) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 31, 0)
+        
+        On Error GoTo producttype
+        ws1.Cells(i, 5) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 6, 0)
+        
+        On Error GoTo TSD 'Target Ship Date
+        ws1.Cells(i, 21) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange, 25, 0)
+    Next i
+    wbPPSS.Close False
+    'Cells(1, 11) = mtsorders
+    
+    If mtscount = 1 Then
+        MsgBox ("The following WO runs have missing information. Please check the PPSS and fill them in appropriately" & vbNewLine & mtsorders)
+    Else
+        MsgBox ("Complete")
+    End If
+    'wbPPSS.Close savechanges:=False
+    Exit Sub
+'----------------------------------------------------------------------------------------------
+'Error handling labels
+'----------------------------------------------------------------------------------------------
+customer:
+    On Error Resume Next
+    Cells(i, 4) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange2, 4, 0)
+    Resume Next
+templatetype:
+    On Error Resume Next
+    Cells(i, 6) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange2, 19, 0)
+    Resume Next
+arrayformat:
+    Cells(i, 7) = "Not Found"
+    mtsorders = mtsorders & Cells(i, 1) & vbNewLine
+    mtscount = 1
+    Resume Next
+species:
+    Cells(i, 8) = "Not Found"
+    Resume Next
+customcustom:
+    Cells(i, 9) = "Not Found"
+    Resume Next
+producttype:
+    Cells(i, 5) = "Not Found"
+    Resume Next
+TSD:
+    On Error Resume Next
+    Cells(i, 21) = Application.WorksheetFunction.VLookup(CDbl(srchval), srchrange2, 8, 0)
+    Resume Next
+
+End Sub
+
+Sub CountOA()
+
+
+    Dim a As Integer
+    Dim b As Integer
+    Dim c As Integer
+    Dim numOA As Integer
+    Dim two_sample As Integer
+    Dim three_sample As Integer
+    Dim d As Integer
+    Dim e As Integer
+    Dim one_sample As Integer
+    
+    
+    
+    '----------------------------------------
+    '   COUNT SNP OA
+    '----------------------------------------
+    
+    N = Range("E" & Rows.Count).End(xlUp).Row
+    For d = 2 To N
+        If Cells(d, 7).Value = 32 Then
+            If StrComp(Trim(Cells(d, 6)), "Human SNP", vbTextCompare) = 0 Or StrComp(Trim(Cells(d, 6)), "Human PGx", vbTextCompare) = 0 Then
+                two_sample = Cells(d, 3) + two_sample
+            End If
+        ElseIf Cells(d, 7).Value = 16 Then
+            If StrComp(Trim(Cells(d, 6)), "Human SNP", vbTextCompare) = 0 Or StrComp(Trim(Cells(d, 6)), "Human PGx", vbTextCompare) = 0 Then
+                three_sample = Cells(d, 3) + three_sample
+            End If
+        ElseIf Cells(d, 7).Value >= 64 Then
+            If StrComp(Trim(Cells(d, 6)), "Human SNP", vbTextCompare) = 0 Or StrComp(Trim(Cells(d, 6)), "Human PGx", vbTextCompare) = 0 Then
+                one_sample = Cells(d, 3) + one_sample
+            End If
+        End If
+    Next d
+    
+    
+    two_sample = two_sample * 2
+    three_sample = three_sample * 3
+    
+    Cells(2, 16) = "SNP 64 Format or above"
+    Cells(2, 16).Font.Size = 24
+    
+    Cells(2, 17) = one_sample
+    Cells(2, 17).Font.Size = 24
+    
+    
+    Cells(3, 16) = "SNP 32 Format"
+    Cells(3, 16).Font.Size = 24
+    
+    Cells(3, 17) = two_sample
+    Cells(3, 17).Font.Size = 24
+    
+    
+    Cells(4, 16) = "SNP 16 Format"
+    Cells(4, 16).Font.Size = 24
+    
+    Cells(4, 17) = three_sample
+    Cells(4, 17).Font.Size = 24
+    
+    '----------------------------------------
+    '   MAKE A NEW LIST OF SAMPLES
+    '----------------------------------------
+    
+    Range("M:N").Clear
+    N = Range("F" & Rows.Count).End(xlUp).Row
+    numOA = 0
+    
+    Range("F2", "F" & N).Copy Range("S2")
+    
+    a = Range("S" & Rows.Count).End(xlUp).Row
+    b = 2
+    c = 2
+    
+    Do While b < a + 1
+        If StrComp(Trim(Cells(b, 19)), "Human SNP", vbTextCompare) <> 0 And StrComp(Trim(Cells(b, 19)), "Human PGx", vbTextCompare) <> 0 Then
+            If StrComp(Trim(Cells(b, 19)), "", vbTextCompare) <> 0 And StrComp(Trim(Cells(b, 19)), "Not Found", vbTextCompare) <> 0 Then
+                Cells(c, 13) = Cells(b, 19)
+                c = c + 1
+            End If
+        End If
+        b = b + 1
+    Loop
+    
+    Range("M2", "M" & N).RemoveDuplicates Columns:=1, Header:=xlNo
+    Range("S1", "S999").Clear
+    '----------------------------------------
+    '   COUNT OA PER SAMPLE
+    '----------------------------------------
+    a = Range("M" & Rows.Count).End(xlUp).Row
+    
+    For b = 2 To a
+        For c = 2 To N
+            If Cells(c, 6) = Cells(b, 13) Then
+                numOA = numOA + Cells(c, 3)
+            End If
+        Next c
+        Cells(b, 14) = numOA
+        Cells(b, 14).Font.Size = 24
+        Cells(b, 13).Font.Size = 24
+        numOA = 0
+    Next b
+    
+End Sub
+
+Sub CopyData()
+
+    Dim wbWOcopy As Workbook
+    Set wbWOcopy = ThisWorkbook
+    Dim wsWOcopy As Worksheet
+    Set wsWOcopy = wbWOcopy.Sheets("WO Status Update")
+    Dim Finite_Location As String
+    Finite_Location = "https://thermofisher-my.sharepoint.com/personal/openarrayple_thermofisher_onmicrosoft_com/Documents/Q3-Q4%202022%20Finite%20Schedule.xlsx"
+    Dim wbWOstatus As Workbook
+    Set wbWOstatus = Application.Workbooks.Open(Finite_Location)
+    Dim wsWOstatus As Worksheet
+    Set wsWOstatus = wbWOstatus.Sheets("QC WO Status Board")
+    Dim rng1 As Range
+    
+    Dim rng2 As Range
+       
+    wsWOcopy.Range("A3:L100").ClearContents
+    wsWOstatus.Range("A1:K100").Copy Destination:=wsWOcopy.Range("A1:K100") 'Copys all relevant data for sorting from WO status board
+    wsWOcopy.Range("A1:K100").SpecialCells(xlCellTypeBlanks).Delete shift:=xlUp 'Removes all blank spaces and move cells up
+    With wsWOcopy
+        Set rng1 = Union(.Range("B3:B100"), .Range("D3:D100"), .Range("F3:F100"), .Range("H3:H100"), .Range("J3:J100"))
+    End With
+    rng1.Interior.ColorIndex = 1
+    With wsWOcopy.Range("A1:L100").Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = 1
+        .TintAndShade = 0
+    End With
+    
+    wbWOstatus.Close savechanges:=False
+
+
+
+
+End Sub
+
+Sub SortData() 'Sorts Data based on TAT date.  If TAT dates doesnt exist then sorts based on TSD dates.
+
+    Dim wbWOcopy As Workbook
+    Set wbWOcopy = ThisWorkbook
+    Dim wsWOcopy As Worksheet
+    Set wsWOcopy = wbWOcopy.Sheets("WO Status Update")
+    Dim positionofValue As Integer
+    Dim j As Integer
+    Dim offset As Integer
+    Dim rng1 As Range
+    Dim rng2 As Range
+    
+    With wsWOcopy
+        Set rng1 = Union(.Range("B3:B100"), .Range("D3:D100"), .Range("F3:F100"), .Range("H3:H100"), .Range("J3:J100"), .Range("L3:L100"))
+        Set rng2 = Union(.Range("A3:A100"), .Range("C3:C100"), .Range("E3:E100"), .Range("G3:G100"), .Range("I3:I100"), .Range("K3:K100"))
+    End With
+    rng1.ClearContents
+    'Double for loop extracts date information from every cell and then places them in the adjacent column (Ex. A to B).  Initial For loop sets N equal to the number of WOs per column
+    For j = 1 To 6
+        If j = 1 Then
+            N = wsWOcopy.Range("A" & Rows.Count).End(xlUp).Row
+        ElseIf j = 2 Then
+            N = wsWOcopy.Range("C" & Rows.Count).End(xlUp).Row
+        ElseIf j = 3 Then
+            N = wsWOcopy.Range("E" & Rows.Count).End(xlUp).Row
+        ElseIf j = 4 Then
+            N = wsWOcopy.Range("G" & Rows.Count).End(xlUp).Row
+        ElseIf j = 5 Then
+            N = wsWOcopy.Range("I" & Rows.Count).End(xlUp).Row
+        ElseIf j = 6 Then
+            N = wsWOcopy.Range("K" & Rows.Count).End(xlUp).Row
+        End If
+        'Secondary for loop extracts the date from the cell by finding the location of either TSD: or TAT: and then moving x amount of white spaces from that location.  The dates are stored
+        'in adjacent columns.  (Ex.  Dates from column A are stored in column B, dates from column C are stored in column D, and so on
+        For i = 3 To N
+            If InStr(1, wsWOcopy.Cells(i, 1 + offset), "TSD:") <> 0 Then
+                positionofValue = InStr(1, wsWOcopy.Cells(i, 1 + offset), "TSD:")
+                wsWOcopy.Cells(i, 2 + offset) = Mid(wsWOcopy.Cells(i, 1 + offset), positionofValue + 5, 10)
+                If IsDate(wsWOcopy.Cells(i, 2 + offset)) Then
+                    wsWOcopy.Cells(i, 2 + offset) = CDate(wsWOcopy.Cells(i, 2 + offset))
+                    If CDate(wsWOcopy.Cells(i, 2 + offset)) <= (Date - 10) Then
+                        wsWOcopy.Cells(i, 1 + offset).Font.Color = vbRed
+                        wsWOcopy.Cells(i, 1 + offset).Font.Bold = True
+                    End If
+                Else
+                wsWOcopy.Cells(i, 2 + offset) = Format(12 / 31 / 9999, "mm/dd/yyyy")
+                End If
+            End If
+            If InStr(1, wsWOcopy.Cells(i, 1 + offset), "TAT:") <> 0 Then
+                positionofValue = InStr(1, wsWOcopy.Cells(i, 1 + offset), "TAT:")
+                wsWOcopy.Cells(i, 2 + offset) = CDate(Mid(wsWOcopy.Cells(i, 1 + offset), positionofValue + 5, 10))
+                If IsDate(wsWOcopy.Cells(i, 2 + offset)) Then
+                    If CDate(wsWOcopy.Cells(i, 2 + offset)) <= (Date) Then
+                        wsWOcopy.Cells(i, 1 + offset).Font.Color = vbRed
+                        wsWOcopy.Cells(i, 1 + offset).Font.Bold = True
+                    End If
+                Else
+                wsWOcopy.Cells(i, 2 + offset) = Format(12 / 31 / 9999, "mm/dd/yyyy")
+                End If
+            End If
+        Next i
+        offset = offset + 2
+        
+    Next j
+    
+    
+    'Made use of the Inbuilt sort algorithm which sorts everything with same data type given a range and a list to sort based off of.  In this case the range is the WO status cells and the adjacent columns
+    'containing the date information.  They are sorted based on the adjacent columns containing the extracted date information in ascending order.
+    ActiveSheet.Range("A3:B100").Sort Key1:=Range("B3"), Order1:=xlAscending
+    ActiveSheet.Range("C3:D100").Sort Key1:=Range("D3"), Order1:=xlAscending
+    ActiveSheet.Range("E3:F100").Sort Key1:=Range("F3"), Order1:=xlAscending
+    ActiveSheet.Range("G3:H100").Sort Key1:=Range("H3"), Order1:=xlAscending
+    ActiveSheet.Range("I3:J100").Sort Key1:=Range("J3"), Order1:=xlAscending
+    ActiveSheet.Range("K3:L100").Sort Key1:=Range("L3"), Order1:=xlAscending
+    'The date information is then removed after sorting is complete
+    
+    rng1.ClearContents
+
+
+    
+End Sub
+
+Sub ReturnData()
+
+    Dim wbWOcopy As Workbook
+    Set wbWOcopy = ThisWorkbook
+    Dim wsWOcopy As Worksheet
+    Set wsWOcopy = wbWOcopy.Sheets("WO Status Update")
+    Dim Finite_Location As String
+    Finite_Location = "https://thermofisher-my.sharepoint.com/personal/openarrayple_thermofisher_onmicrosoft_com/Documents/Q3-Q4%202022%20Finite%20Schedule.xlsx"
+    Dim wbWOstatus As Workbook
+    Set wbWOstatus = Application.Workbooks.Open(Finite_Location)
+    Dim wsWOstatus As Worksheet
+    Set wsWOstatus = wbWOstatus.Sheets("QC WO Status Board")
+    
+    'Returns sorted information back to WO Status Board
+    wsWOstatus.Range("A3:L100").ClearContents
+    wsWOcopy.Range("A1:K100").Copy Destination:=wsWOstatus.Range("A1:K100")
+    'wbWOstatus.Close savechanges:=True
+
+End Sub
+
+Sub ClearContents()
+    
+    Dim wbWOcopy As Workbook
+    Set wbWOcopy = ThisWorkbook
+    Dim wsWOcopy As Worksheet
+    Set wsWOcopy = wbWOcopy.Sheets("WO Check")
+    
+    wsWOcopy.Range("A2:O100").ClearContents
+    wsWOcopy.Range("P2:Q6").ClearContents
+    With wsWOcopy.Range("A1:I100").Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = 1
+        .TintAndShade = 0
+    End With
+    With wsWOcopy.Range("J1:K100").Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = 1
+        .TintAndShade = 0
+    End With
+    With wsWOcopy.Range("O5:O100").Borders
+        .LineStyle = xlNone
+    End With
+    wsWOcopy.Range("A1:C100").Interior.Color = RGB(216, 228, 188)
+    wsWOcopy.Range("K1:K100").Interior.Color = RGB(255, 255, 255)
+
+End Sub
+
+Function getRGB1(FCell As Range) As String
+'UpdatebyExtendoffice20170714
+    Dim xColor As String
+    xColor = CStr(FCell.Interior.Color)
+    xColor = Right("000000" & Hex(xColor), 6)
+    getRGB1 = Right(xColor, 2) & Mid(xColor, 3, 2) & Left(xColor, 2)
+End Function
+
+Sub dataToWord()
+    
+    Dim wb1 As Workbook
+    Set wb1 = ThisWorkbook
+    Dim ws1 As Worksheet
+    Set ws1 = wb1.Sheets("WO Check")
+    Dim wDoc As Word.Document
+    Dim wordApp As Word.Application
+    Set wordApp = CreateObject("word.application")
+    wordApp.Visible = True
+    Dim file_name As String
+    Dim output_path As String
+    Dim rng As Range
+    Dim k As Integer
+    Dim WO_number As String
+    Dim aFile As String
+    Dim deliveryTime As String
+    
+    aFile = "\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\*.pdf*"
+    
+    If Len(Dir$(aFile)) > 0 Then
+     Kill aFile
+    End If
+    
+    deliveryTime = CStr(Sheets("WO Check").Cells(8, 16))
+    Range("A2").Select
+    N = Range("A" & Rows.Count).End(xlUp).Row
+    If N = 1 Then
+    If Sheets("WO Check").Cells(k, 5) = "GEx" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Gene Expression PaperWork.docx")
+            For i = 1 To 6
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = deliveryTime + String(CLng(8 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(2).Range.Text = WO_number + String(CLng(50 - Len(WO_number)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(47 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = wDoc.ContentControls(2).Range.Text
+            wDoc.ContentControls(5).Range.Text = wDoc.ContentControls(3).Range.Text
+            wDoc.ContentControls(6).Range.Text = Sheets("WO Check").Cells(k, 7)
+            
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+        If Sheets("WO Check").Cells(k, 5) = "GT" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Genotyping PaperWork.docx")
+            For i = 1 To 7
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = deliveryTime + String(CLng(8 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(2).Range.Text = WO_number + String(CLng(50 - Len(WO_number)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(47 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = Sheets("WO Check").Cells(k, 7)
+            wDoc.ContentControls(5).Range.Text = wDoc.ContentControls(2).Range.Text
+            wDoc.ContentControls(6).Range.Text = wDoc.ContentControls(3).Range.Text
+            wDoc.ContentControls(7).Range.Text = wDoc.ContentControls(4).Range.Text
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+        If Sheets("WO Check").Cells(k, 5) = "MM + H2O" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Mastermix Water PaperWork.docx")
+            For i = 1 To 4
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = WO_number + String(CLng(35 - Len(WO_number)), "_")
+            wDoc.ContentControls(2).Range.Text = deliveryTime + String(CLng(5 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(32 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = Sheets("WO Check").Cells(k, 7)
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+        wordApp.Application.Quit
+        ActiveWorkbook.FollowHyperlink (Sheets("WO Check").Cells(12, 15))
+        ws1.Range("O12:O30").ClearContents
+    Else
+    For k = 2 To N
+        If Sheets("WO Check").Cells(k, 5) = "GEx" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Gene Expression PaperWork.docx")
+            For i = 1 To 6
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = deliveryTime + String(CLng(8 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(2).Range.Text = WO_number + String(CLng(50 - Len(WO_number)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(47 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = wDoc.ContentControls(2).Range.Text
+            wDoc.ContentControls(5).Range.Text = wDoc.ContentControls(3).Range.Text
+            wDoc.ContentControls(6).Range.Text = Sheets("WO Check").Cells(k, 7)
+            
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+        If Sheets("WO Check").Cells(k, 5) = "GT" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Genotyping PaperWork.docx")
+            For i = 1 To 7
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = deliveryTime + String(CLng(8 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(2).Range.Text = WO_number + String(CLng(50 - Len(WO_number)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(47 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = Sheets("WO Check").Cells(k, 7)
+            wDoc.ContentControls(5).Range.Text = wDoc.ContentControls(2).Range.Text
+            wDoc.ContentControls(6).Range.Text = wDoc.ContentControls(3).Range.Text
+            wDoc.ContentControls(7).Range.Text = wDoc.ContentControls(4).Range.Text
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+        If Sheets("WO Check").Cells(k, 5) = "MM + H2O" Then
+        Set wDoc = wordApp.Documents.Open("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\Mastermix Water PaperWork.docx")
+            For i = 1 To 4
+                wDoc.ContentControls(i).Range.Text = ""
+            Next i
+            
+            WO_number = CStr(Sheets("WO Check").Cells(k, 1)) + "-" + CStr(Sheets("WO Check").Cells(k, 2))
+            wDoc.ContentControls(1).Range.Text = WO_number + String(CLng(35 - Len(WO_number)), "_")
+            wDoc.ContentControls(2).Range.Text = deliveryTime + String(CLng(5 - Len(deliveryTime)), "_")
+            wDoc.ContentControls(3).Range.Text = Sheets("WO Check").Cells(k, 4) + String(CLng(32 - Len(Sheets("WO Check").Cells(k, 4))), "_")
+            wDoc.ContentControls(4).Range.Text = Sheets("WO Check").Cells(k, 7)
+            
+            output_path = ("\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\WO")
+            Sheets("WO Check").Cells(10 + k, 15) = output_path + CStr(k) + ".pdf"
+            wDoc.SaveAs2 output_path & Replace(CStr(k), ".docx", ".pdf"), 17
+            wordApp.Documents.Close savechanges:=False
+            'wordApp.Application.Quit
+        End If
+    Next k
+    wordApp.Application.Quit
+    combine_pdf_files
+    ActiveWorkbook.FollowHyperlink (Sheets("WO Check").Cells(12, 15))
+    ws1.Range("O12:O30").ClearContents
+    End If
+End Sub
+
+Sub combine_pdf_files()
+
+Dim Aapp As Acrobat.AcroApp
+Dim toDoc As Acrobat.AcroPDDoc
+Dim fromDoc As Acrobat.AcroPDDoc
+Dim finalDoc As Acrobat.AcroPDDoc
+Dim N As Integer
+Dim k As Integer
+Dim PDFfiles As Variant
+
+Set Aapp = CreateObject("AcroExch.App")
+Set toDoc = CreateObject("AcroExch.PDDoc")
+Set fromDoc = CreateObject("AcroExch.PDDoc")
+N = Range("O" & Rows.Count).End(xlUp).Row - 11
+
+With ActiveSheet
+        PDFfiles = .Range("O12", ActiveSheet.Range("O12").End(xlDown)).Value
+End With
+
+Aapp.Show
+toDoc.Open (PDFfiles(1, 1))
+For i = 1 To N
+    
+    fromDoc.Open (PDFfiles(i, 1))
+    If fromDoc.GetNumPages = 1 Then
+    If toDoc.InsertPages(1, fromDoc, 0, 1, 0) = False Then
+        Debug.Print "Failed to insert the page"
+    End If
+    If toDoc.Save(PDSaveIncremental, "\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\combined.pdf") = True Then
+    End If
+    Else
+    If toDoc.InsertPages(1, fromDoc, 0, 2, 0) = False Then
+        Debug.Print "Failed to insert the page"
+    End If
+    If toDoc.Save(PDSaveIncremental, "\\Ple01file01\Open_Array\Quality_Control\01_QC Personnel\Nathan\My Projects\PDFs\combined.pdf") = True Then
+    End If
+    End If
+    fromDoc.Close
+    
+Next i
+
+Aapp.Exit
+
+Set Aapp = Nothing
+Set toDoc = Nothing
+Set fromDoc = Nothing
+Set Aapp = Nothing
+
+End Sub
